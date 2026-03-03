@@ -30,7 +30,8 @@ async def _generate_ollama(prompt: str, temperature: float) -> Optional[str]:
     system = "You are an insurance policy assistant. You must answer ONLY using the provided context."
     base = settings.OLLAMA_BASE_URL.rstrip("/")
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        # Use a generous timeout; first generation after a pull can be slow.
+        async with httpx.AsyncClient(timeout=300.0) as client:
             # 1) Try Ollama "generate" endpoint (older + common)
             url = f"{base}/api/generate"
             payload = {
@@ -83,7 +84,7 @@ async def _generate_ollama(prompt: str, temperature: float) -> Optional[str]:
             msg = data["choices"][0].get("message") or {}
             return (msg.get("content") or "").strip()
         return None
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.HTTPStatusError):
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.HTTPStatusError):
         # Ollama not running or not installed — caller can fall back to context-only
         return None
 
